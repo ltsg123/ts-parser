@@ -6,7 +6,7 @@ class TsPacketHeader {
 
   public adaptation_field_length: number; // (8 bits) 这个字节指明了自适应区的长度，不包含此字节 如果为0后续不管
 
-  public ts_adaptation_flags: TsAdaptationFlags;
+  public flags: TsAdaptationFlags;
 
   public length: number;
 
@@ -15,7 +15,7 @@ class TsPacketHeader {
 
     this.adaptation_field_length = data[4];
 
-    this.ts_adaptation_flags = new TsAdaptationFlags(data[5]);
+    this.flags = new TsAdaptationFlags(data[5]);
 
     this.length = data.length;
   }

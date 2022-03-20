@@ -1,6 +1,7 @@
 import TsPacketHeader from "./head/ts_head";
 import PatSection from "./pat";
 import PatMapArray from "./pat/pat_map_array";
+import { lts_pes_parse_header } from "./pes";
 import PmtSection from "./pmt";
 import PmtStreamArray from "./pmt/pmt_stream_array";
 import { MAX_PROGRAM_NUM, MAX_STREAM_NUM, TDemux } from "./TDemux/types";
@@ -77,9 +78,9 @@ function handle_ts_pack (handle: TDemux, data: Uint8Array) {
       if (pid == handle.info.prog[i].stream[sn].es_pid) {
         handle.program_no = i;
         handle.stream_no = sn;
-        // get_ts_pcr(ts_pack, & handle.pts);
+        get_ts_pcr(tsPacket, handle);
         handle.is_pes = 1;
-        // get_ts_es(handle, ts_pack);
+        get_ts_es(tsPacket, handle);
         return 0;
       }
     }
@@ -108,4 +109,54 @@ function get_ts_payload_offset (ts_header: TsPacketHeader) {
   }
 
   return payload_offset;
+}
+
+function get_ts_pcr (tsPacket: TsPacket, handle: TDemux) {
+  const header = tsPacket.ts_header;
+  if (header.head.adaptation_field_control == 0 ||
+    header.head.adaptation_field_control == 1)
+    return;
+  if (header.adaptation_field_length == 0)
+    return;
+
+  if (header.flags.PCR_flag) {
+    const buf = tsPacket.data.subarray(6);
+    handle.pts = (buf[0] << 25) |
+      (buf[1] << 17) |
+      (buf[2] << 9) |
+      (buf[3] << 1) |
+      (buf[4] >> 7);
+    handle.pts /= 90;
+  }
+}
+
+function get_ts_es (tsPacket: TsPacket, handle: TDemux) {
+  let payload_offset;
+  let payload_len;
+
+  payload_offset = get_ts_payload_offset(tsPacket.ts_header);
+  payload_len = 188 - payload_offset;
+
+  // 计算PES包头长度
+  if (handle.pes_head_len <= 0) {
+    handle.pes_head_len = lts_pes_parse_header(tsPacket.data.subarray(payload_offset), payload_len, null, handle, null);
+  }
+
+  // 去除PES包头
+  if (handle.pes_head_len > 0) {
+    if (handle.pes_head_len <= payload_len) {
+      handle.es_ptr = tsPacket.data.subarray(payload_offset + handle.pes_head_len)
+      handle.es_len = payload_len - handle.pes_head_len;
+      handle.pes_head_len = 0;
+    }
+    else {
+      handle.pes_head_len -= payload_len;
+      handle.es_ptr = null;
+      handle.es_len = 0;
+    }
+  }
+  else {
+    handle.es_ptr = tsPacket.data.subarray(payload_offset);
+    handle.es_len = payload_len;
+  }
 }

@@ -3,8 +3,8 @@ import TsPacketHeader from "./head/ts_head";
 class TsPacket {
   public ts_header: TsPacketHeader;
 
-  constructor(unit: Uint8Array) {
-    this.ts_header = new TsPacketHeader(unit.subarray(0, 6));
+  constructor(public data: Uint8Array) {
+    this.ts_header = new TsPacketHeader(data.subarray(0, 6));
   }
 
   get_ts_payload_offset () {

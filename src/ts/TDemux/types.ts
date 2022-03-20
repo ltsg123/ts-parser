@@ -38,7 +38,7 @@ interface TDemux {
   pes_pts: number;		// 当前PES的时间戳
   pack_ptr: Uint8Array		// 解出一包的首地址
   pack_len: number;			// 解出一包的长度
-  es_ptr: Uint8Array;		// ES数据首地址
+  es_ptr: Uint8Array | null;		// ES数据首地址
   es_len: number;				// ES数据长度
   pes_head_len: number;		// PES头部长度
   sync_only: number;			// 只同步包，不解析包
